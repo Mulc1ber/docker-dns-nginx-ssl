@@ -1,0 +1,35 @@
+services:
+  date:
+    image: mulc1ber/result-date
+    build:
+      dockerfile: date.dockerfile
+  result:
+    image: mulc1ber/result
+    build: .
+    # или
+    #  dockerfile: Dockerfile
+    ports:
+      - "3000:3000"
+    environment:
+      - DATE_SERVER_HOST=http://date:3005
+    depends_on:
+      - date
+   
+  nginx:
+    image: nginx
+    ports:
+      - "80:80"
+      - "443:443"
+    command: "/bin/sh -c 'while :; do sleep 12h & wait $${!}; nginx -s reload; done & nginx -g \"daemon off;\"'"  
+    volumes:
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf
+      - ./static:/static
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/data:/etc/letsencrypt
+
+  certbot:
+    image: certbot/certbot
+    entrypoint: "/bin/sh -c 'trap exit TERM; while :; do certbot renew; sleep 12h & wait $${!}; done;'"
+    volumes:
+      - ./certbot/www:/var/www/certbot
+      - ./certbot/data:/etc/letsencrypt
